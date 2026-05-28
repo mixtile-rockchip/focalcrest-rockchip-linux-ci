@@ -136,12 +136,10 @@ jobs:
           sed -i '/^BR2_CCACHE/d' "$CFG"
 
           # Append ccache settings
-          cat >> "$CFG" <<'EOF'
-BR2_CCACHE=y
-BR2_CCACHE_DIR="/tmp/buildroot-ccache"
-BR2_CCACHE_INITIAL_SETUP="--max-size=5G"
-BR2_CCACHE_USE_BASEDIR=y
-EOF
+          echo 'BR2_CCACHE=y' >> "$CFG"
+          echo 'BR2_CCACHE_DIR="/tmp/buildroot-ccache"' >> "$CFG"
+          echo 'BR2_CCACHE_INITIAL_SETUP="--max-size=5G"' >> "$CFG"
+          echo 'BR2_CCACHE_USE_BASEDIR=y' >> "$CFG"
 
           echo "--- Injected ccache config into $(basename "$CFG") ---"
           tail -5 "$CFG"
