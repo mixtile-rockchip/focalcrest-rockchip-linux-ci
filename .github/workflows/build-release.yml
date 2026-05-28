@@ -23,6 +23,7 @@ jobs:
     env:
       SOURCE_DIR: ${{ github.workspace }}/source
       RAW_IMAGE_DIR: output/raw/Image
+      CCACHE_DIR: /tmp/buildroot-ccache
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,8 +43,10 @@ jobs:
             tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev uuid-dev lzma-dev \
             libbluetooth-dev u-boot-tools sudo time rsync libmpc-dev bsdmainutils \
             gettext xxd binfmt-support qemu-user-static git-lfs python-is-python3 \
-            ca-certificates file
+            ca-certificates file \
+            ccache
 
+          ccache --version
           git lfs install
 
       - name: Install repo
@@ -110,6 +113,39 @@ jobs:
           cp assets/logo/focalcrest.bmp "${SOURCE_DIR}/kernel/logo.bmp"
           cp assets/logo/focalcrest.bmp "${SOURCE_DIR}/kernel/logo_kernel.bmp"
 
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/buildroot-ccache
+          key: br-ccache-${{ github.event.inputs.board }}-${{ github.sha }}
+          restore-keys: |
+            br-ccache-${{ github.event.inputs.board }}-
+
+      - name: Inject Buildroot ccache config
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event.inputs.board }}" = "AZ04B" ]; then
+            CFG="${SOURCE_DIR}/buildroot/configs/rockchip_rk3588s_focalcrest_az04b_defconfig"
+          elif [ "${{ github.event.inputs.board }}" = "AZ07" ]; then
+            CFG="${SOURCE_DIR}/buildroot/configs/rockchip_rk3566_focalcrest_az07_defconfig"
+          fi
+
+          # Remove any existing ccache settings to avoid duplicates
+          sed -i '/^BR2_CCACHE/d' "$CFG"
+
+          # Append ccache settings
+          cat >> "$CFG" <<'EOF'
+BR2_CCACHE=y
+BR2_CCACHE_DIR="/tmp/buildroot-ccache"
+BR2_CCACHE_INITIAL_SETUP="--max-size=5G"
+BR2_CCACHE_USE_BASEDIR=y
+EOF
+
+          echo "--- Injected ccache config into $(basename "$CFG") ---"
+          tail -5 "$CFG"
+
       - name: Build image
         shell: bash
         run: |
@@ -117,12 +153,23 @@ jobs:
 
           cd "${SOURCE_DIR}"
 
+          # Ensure ccache dir exists and is writable by root (sudo builds as root)
+          mkdir -p "${CCACHE_DIR}"
+          sudo chmod 777 "${CCACHE_DIR}"
+
           if [ "${{ github.event.inputs.board }}" = "AZ04B" ]; then
-            sudo ./build.sh chip:rk3588:rockchip_rk3588s_focalcrest_az04b_defconfig
+            sudo -E ./build.sh chip:rk3588:rockchip_rk3588s_focalcrest_az04b_defconfig
           elif [ "${{ github.event.inputs.board }}" = "AZ07" ]; then
-            sudo ./build.sh chip:rk3566_rk3568:rockchip_rk3566_focalcrest_az07_defconfig
+            sudo -E ./build.sh chip:rk3566_rk3568:rockchip_rk3566_focalcrest_az07_defconfig
           fi
-          sudo ./build.sh all
+          sudo -E ./build.sh all
+
+      - name: ccache statistics
+        if: always()
+        shell: bash
+        run: |
+          echo "=== ccache statistics ==="
+          ccache -s 2>/dev/null || sudo ccache -s 2>/dev/null || echo "ccache stats unavailable"
 
       - name: Rename and compress raw image
         id: package
