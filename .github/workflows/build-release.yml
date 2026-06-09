@@ -179,7 +179,7 @@ jobs:
           echo "=== ccache statistics ==="
           ccache -s 2>/dev/null || sudo ccache -s 2>/dev/null || echo "ccache stats unavailable"
 
-      - name: Rename and compress raw image
+      - name: Rename raw image
         id: package
         shell: bash
         run: |
@@ -190,10 +190,9 @@ jobs:
 
           cd "${SOURCE_DIR}/${RAW_IMAGE_DIR}"
           sudo mv raw.img "image-raw-format-${BOARD}-Production-Test-${DATE}.img"
-          sudo xz -4 --force --quiet --threads=0 "image-raw-format-${BOARD}-Production-Test-${DATE}.img"
-          sudo chown "${USER}:${USER}" "image-raw-format-${BOARD}-Production-Test-${DATE}.img.xz"
+          sudo chown "${USER}:${USER}" "image-raw-format-${BOARD}-Production-Test-${DATE}.img"
 
-          echo "archive_path=${SOURCE_DIR}/${RAW_IMAGE_DIR}/image-raw-format-${BOARD}-Production-Test-${DATE}.img.xz" >> "${GITHUB_OUTPUT}"
+          echo "archive_path=${SOURCE_DIR}/${RAW_IMAGE_DIR}/image-raw-format-${BOARD}-Production-Test-${DATE}.img" >> "${GITHUB_OUTPUT}"
 
       - name: Prepare release metadata
         id: release_meta
