@@ -107,7 +107,7 @@ function route(){
   else renderIndex();
 }
 
-fetch('data.json').then(r=>r.json()).then(d=>{
+fetch('data.json?v=' + Date.now()).then(r=>r.json()).then(d=>{
   DATA=d;
   route();
   window.addEventListener('hashchange',route);

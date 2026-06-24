@@ -1,8 +1,8 @@
 name: Pages
 
+# Pages is now deployed automatically at the end of build-release.yml.
+# This workflow is kept as a manual "rebuild site" entry point only.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
