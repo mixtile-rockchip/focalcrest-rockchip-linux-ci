@@ -1,10 +1,14 @@
 # Focalcrest Rockchip CI
 
-CI/CD repository for building RK7 Rockchip Linux images.
+CI/CD repository for building Rockchip Linux images.
+
+> 📥 **[Firmware Download](https://mixtile-rockchip.github.io/focalcrest-rockchip-linux-ci/)**
+> Browse and download built images by board and date.
 
 ## Supported Boards
 - AZ04B
 - AZ07
+- AZ08
 
 ## Build Type
 - Production Test
@@ -13,7 +17,7 @@ CI/CD repository for building RK7 Rockchip Linux images.
 GitHub Actions -> Build -> Select Board
 
 ## Outputs
-- Compressed Rockchip `raw.img` in GitHub Release (`.img.xz`)
+- Rockchip `raw.img` in GitHub Release (`.img`)
 
 ## Required Repository Secret
 - `GITLAB_TOKEN`
