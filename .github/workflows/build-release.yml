@@ -11,6 +11,7 @@ on:
         type: choice
         options:
           - AZ04B
+          - AZ05
           - AZ07
           - AZ08
 
@@ -74,6 +75,11 @@ jobs:
               -u https://github.com/mixtile-rockchip/manifests.git \
               -b linux-6.1-stan-rkr7 \
               -m rk3588-linux6.1-stan-rkr7.xml
+          elif [ "${{ github.event.inputs.board }}" = "AZ05" ]; then
+            repo init \
+              -u https://github.com/mixtile-rockchip/manifests.git \
+              -b linux-6.1-stan-rkr7 \
+              -m rk3288-linux6.1-stan-rkr7.xml
           elif [ "${{ github.event.inputs.board }}" = "AZ07" ]; then
             repo init \
               -u https://github.com/mixtile-rockchip/manifests.git \
@@ -136,6 +142,8 @@ jobs:
 
           if [ "${{ github.event.inputs.board }}" = "AZ04B" ]; then
             CFG="${SOURCE_DIR}/buildroot/configs/rockchip_rk3588s_focalcrest_az04b_defconfig"
+          elif [ "${{ github.event.inputs.board }}" = "AZ05" ]; then
+            CFG="${SOURCE_DIR}/buildroot/configs/rockchip_rk3288_focalcrest_az05_defconfig"
           elif [ "${{ github.event.inputs.board }}" = "AZ07" ]; then
             CFG="${SOURCE_DIR}/buildroot/configs/rockchip_rk3566_focalcrest_az07_defconfig"
           elif [ "${{ github.event.inputs.board }}" = "AZ08" ]; then
@@ -167,6 +175,8 @@ jobs:
 
           if [ "${{ github.event.inputs.board }}" = "AZ04B" ]; then
             sudo -E ./build.sh chip:rk3588:rockchip_rk3588s_focalcrest_az04b_defconfig
+          elif [ "${{ github.event.inputs.board }}" = "AZ05" ]; then
+            sudo -E ./build.sh chip:rk3288:rockchip_rk3288_focalcrest_az05_defconfig
           elif [ "${{ github.event.inputs.board }}" = "AZ07" ]; then
             sudo -E ./build.sh chip:rk3566_rk3568:rockchip_rk3566_focalcrest_az07_defconfig
           elif [ "${{ github.event.inputs.board }}" = "AZ08" ]; then

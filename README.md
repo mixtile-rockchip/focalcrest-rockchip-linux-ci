@@ -7,6 +7,7 @@ CI/CD repository for building Rockchip Linux images.
 
 ## Supported Boards
 - AZ04B
+- AZ05
 - AZ07
 - AZ08
 
