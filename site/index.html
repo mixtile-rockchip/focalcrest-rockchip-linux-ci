@@ -101,8 +101,39 @@ function renderBoard(board){
       </tr>`).join('')}</tbody></table>`;
 }
 
+function renderNotFound(name){
+  $('#title').textContent=name;
+  $('#crumb').innerHTML=`Index of / <a href="#/">[..]</a> / ${esc(name)}`;
+  $('#view').innerHTML=`<p class="empty">No image found for “${esc(name)}”.</p>`;
+}
+
+// 命中 #/<board>/latest:先渲染状态(避免白屏),再自动触发下载
+function downloadLatest(board, entry){
+  $('#title').textContent=`${board} · latest`;
+  $('#crumb').innerHTML=`Index of / <a href="#/">[..]</a> / `
+    +`<a href="#/${encodeURIComponent(board)}/">${esc(board)}/</a> / latest`;
+  $('#view').innerHTML=`<p>正在下载最新 <b>${esc(board)}</b> 镜像:
+      <a href="${esc(entry.url)}">${esc(entry.asset)}</a>
+      <span class="badge">${fmtSize(entry.size)}</span></p>
+    <p class="empty">如果下载没有自动开始,请点击上面的文件名。</p>`;
+  const a=document.createElement('a');
+  a.href=entry.url; document.body.appendChild(a); a.click(); a.remove();
+}
+
 function route(){
-  const m=location.hash.replace(/^#/,'').match(/^\/([^/]+)\/?$/);
+  const h=location.hash.replace(/^#/,'');
+
+  // #/<board>/latest → 直接跳转到该板最新镜像,浏览器立即开始下载(精确匹配板名)
+  const lm=h.match(/^\/([^/]+)\/latest\/?$/);
+  if(lm){
+    const board=decodeURIComponent(lm[1]);
+    const arr=grouped()[board];
+    if(arr&&arr.length){ downloadLatest(board, arr[0]); return; }
+    renderNotFound(board); return;
+  }
+
+  // #/<board>/ → 该板镜像列表(精确匹配板名)
+  const m=h.match(/^\/([^/]+)\/?$/);
   if(m && grouped()[decodeURIComponent(m[1])]) renderBoard(decodeURIComponent(m[1]));
   else renderIndex();
 }
