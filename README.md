@@ -6,6 +6,7 @@ CI/CD repository for building Rockchip Linux images.
 > Browse and download built images by board and date.
 
 ## Supported Boards
+- AZ04A
 - AZ04B
 - AZ05
 - AZ07
