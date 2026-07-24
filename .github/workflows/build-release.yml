@@ -1,5 +1,5 @@
 name: Build
-run-name: Build with Focalcrest ${{ github.event.inputs.board }} Production Test
+run-name: Build Focalcrest ${{ github.event.inputs.board }} ${{ github.event.inputs.build_type }}
 
 on:
   workflow_dispatch:
@@ -15,6 +15,14 @@ on:
           - AZ05
           - AZ07
           - AZ08
+      build_type:
+        description: Build type (Test = 测试固件, Release = 正式发布固件)
+        required: true
+        default: Test
+        type: choice
+        options:
+          - Test
+          - Release
 
 permissions:
   contents: write      # publish release
@@ -201,31 +209,60 @@ jobs:
           echo "=== ccache statistics ==="
           ccache -s 2>/dev/null || sudo ccache -s 2>/dev/null || echo "ccache stats unavailable"
 
+      # Map the build_type input to the channel's naming / release flags.
+      # Test    -> label Production-Test, tag prefix test-,    prerelease=true  (never "Latest")
+      # Release -> label Official-Release, tag prefix release-, prerelease=false + make_latest
+      - name: Resolve build type
+        id: bt
+        shell: bash
+        env:
+          BUILD_TYPE: ${{ github.event.inputs.build_type }}
+        run: |
+          set -euo pipefail
+          if [ "${BUILD_TYPE}" = "Release" ]; then
+            echo "label=Official-Release"      >> "${GITHUB_OUTPUT}"
+            echo "tag_prefix=release"          >> "${GITHUB_OUTPUT}"
+            echo "prerelease=false"            >> "${GITHUB_OUTPUT}"
+            echo "make_latest=true"            >> "${GITHUB_OUTPUT}"
+            echo "name_suffix=Official Release" >> "${GITHUB_OUTPUT}"
+          else
+            echo "label=Production-Test"       >> "${GITHUB_OUTPUT}"
+            echo "tag_prefix=test"             >> "${GITHUB_OUTPUT}"
+            echo "prerelease=true"             >> "${GITHUB_OUTPUT}"
+            echo "make_latest=false"           >> "${GITHUB_OUTPUT}"
+            echo "name_suffix=Production Test" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Rename raw image
         id: package
         shell: bash
+        env:
+          BOARD: ${{ github.event.inputs.board }}
+          LABEL: ${{ steps.bt.outputs.label }}
         run: |
           set -euo pipefail
 
           DATE=$(date +%Y-%m-%d)
-          BOARD="${{ github.event.inputs.board }}"
+          IMG="image-raw-format-${BOARD}-${LABEL}-${DATE}.img"
 
           cd "${SOURCE_DIR}/${RAW_IMAGE_DIR}"
-          sudo mv raw.img "image-raw-format-${BOARD}-Production-Test-${DATE}.img"
-          sudo chown "${USER}:${USER}" "image-raw-format-${BOARD}-Production-Test-${DATE}.img"
+          sudo mv raw.img "${IMG}"
+          sudo chown "${USER}:${USER}" "${IMG}"
 
-          echo "archive_path=${SOURCE_DIR}/${RAW_IMAGE_DIR}/image-raw-format-${BOARD}-Production-Test-${DATE}.img" >> "${GITHUB_OUTPUT}"
+          echo "archive_path=${SOURCE_DIR}/${RAW_IMAGE_DIR}/${IMG}" >> "${GITHUB_OUTPUT}"
 
       - name: Prepare release metadata
         id: release_meta
         shell: bash
+        env:
+          BOARD: ${{ github.event.inputs.board }}
+          TAG_PREFIX: ${{ steps.bt.outputs.tag_prefix }}
         run: |
           set -euo pipefail
 
           BUILD_DATE_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           TAG_TIMESTAMP_UTC="$(date -u +%Y%m%d%H%M%S)"
-          BOARD="${{ github.event.inputs.board }}"
-          TAG_NAME="Production-Test-${TAG_TIMESTAMP_UTC}-${BOARD}"
+          TAG_NAME="${TAG_PREFIX}-${TAG_TIMESTAMP_UTC}-${BOARD}"
 
           echo "build_date_utc=${BUILD_DATE_UTC}" >> "${GITHUB_OUTPUT}"
           echo "tag_name=${TAG_NAME}" >> "${GITHUB_OUTPUT}"
@@ -234,15 +271,15 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.release_meta.outputs.tag_name }}
-          name: ${{ github.event.inputs.board }} Production Test Build ${{ github.run_id }}
+          name: ${{ github.event.inputs.board }} ${{ steps.bt.outputs.name_suffix }} Build ${{ github.run_id }}
           body: |
-            ${{ github.event.inputs.board }} Production Test Image
+            ${{ github.event.inputs.board }} ${{ steps.bt.outputs.name_suffix }} Image
             Build Date: ${{ steps.release_meta.outputs.build_date_utc }}
             Run ID: ${{ github.run_id }}
           files: ${{ steps.package.outputs.archive_path }}
           draft: false
-          prerelease: false
-          make_latest: legacy
+          prerelease: ${{ steps.bt.outputs.prerelease }}
+          make_latest: ${{ steps.bt.outputs.make_latest }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -269,33 +306,7 @@ jobs:
       - name: Build site
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          mkdir -p _site
-          cp site/index.html _site/index.html
-          python3 - <<'PY'
-          import json, os, re, urllib.request
-          repo = os.environ["GITHUB_REPOSITORY"]
-          headers = {"Authorization": f"Bearer {os.environ['GH_TOKEN']}",
-                     "Accept": "application/vnd.github+json", "User-Agent": "pages-gen"}
-          items, url = [], f"https://api.github.com/repos/{repo}/releases?per_page=100"
-          while url:
-              with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as r:
-                  items.extend(json.load(r))
-                  m = re.search(r'<([^>]+)>;\s*rel="next"', r.headers.get("Link", ""))
-                  url = m.group(1) if m else None
-          out = []
-          for rel in items:
-              board = rel["tag_name"].split("-")[-1]
-              for a in rel["assets"]:
-                  if a["name"].endswith((".img", ".img.xz")):
-                      out.append({"board": board, "tag": rel["tag_name"], "date": rel["published_at"],
-                                  "asset": a["name"], "size": a["size"],
-                                  "url": a["browser_download_url"], "release_url": rel["html_url"]})
-          out.sort(key=lambda x: x["date"], reverse=True)
-          json.dump(out, open("_site/data.json", "w"), indent=2, ensure_ascii=False)
-          print(f"wrote {len(out)} entries")
-          PY
+        run: python3 site/build.py
 
       - uses: actions/upload-pages-artifact@v3
         with:
