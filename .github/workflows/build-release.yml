@@ -210,8 +210,8 @@ jobs:
           ccache -s 2>/dev/null || sudo ccache -s 2>/dev/null || echo "ccache stats unavailable"
 
       # Map the build_type input to the channel's naming / release flags.
-      # Test    -> label Production-Test, tag prefix test-,    prerelease=true  (never "Latest")
-      # Release -> label Official-Release, tag prefix release-, prerelease=false + make_latest
+      # Test    -> label Production-Test-Snapshot, tag prefix Production-Test-Snapshot-, prerelease=true  (never "Latest")
+      # Release -> label Production-Test,          tag prefix Production-Test-,          prerelease=false + make_latest
       - name: Resolve build type
         id: bt
         shell: bash
@@ -220,17 +220,17 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${BUILD_TYPE}" = "Release" ]; then
-            echo "label=Official-Release"      >> "${GITHUB_OUTPUT}"
-            echo "tag_prefix=release"          >> "${GITHUB_OUTPUT}"
-            echo "prerelease=false"            >> "${GITHUB_OUTPUT}"
-            echo "make_latest=true"            >> "${GITHUB_OUTPUT}"
-            echo "name_suffix=Official Release" >> "${GITHUB_OUTPUT}"
+            echo "label=Production-Test"                >> "${GITHUB_OUTPUT}"
+            echo "tag_prefix=Production-Test"           >> "${GITHUB_OUTPUT}"
+            echo "prerelease=false"                     >> "${GITHUB_OUTPUT}"
+            echo "make_latest=true"                     >> "${GITHUB_OUTPUT}"
+            echo "name_suffix=Production Test"          >> "${GITHUB_OUTPUT}"
           else
-            echo "label=Production-Test"       >> "${GITHUB_OUTPUT}"
-            echo "tag_prefix=test"             >> "${GITHUB_OUTPUT}"
-            echo "prerelease=true"             >> "${GITHUB_OUTPUT}"
-            echo "make_latest=false"           >> "${GITHUB_OUTPUT}"
-            echo "name_suffix=Production Test" >> "${GITHUB_OUTPUT}"
+            echo "label=Production-Test-Snapshot"       >> "${GITHUB_OUTPUT}"
+            echo "tag_prefix=Production-Test-Snapshot"  >> "${GITHUB_OUTPUT}"
+            echo "prerelease=true"                      >> "${GITHUB_OUTPUT}"
+            echo "make_latest=false"                    >> "${GITHUB_OUTPUT}"
+            echo "name_suffix=Production Test Snapshot" >> "${GITHUB_OUTPUT}"
           fi
 
       - name: Rename raw image
