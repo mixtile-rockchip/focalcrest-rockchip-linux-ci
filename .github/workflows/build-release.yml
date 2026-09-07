@@ -15,6 +15,7 @@ on:
           - AZ05
           - AZ07
           - AZ08
+          - Core3588E
       build_type:
         description: Build type (Test = 测试固件, Release = 正式发布固件)
         required: true
@@ -104,6 +105,11 @@ jobs:
               -u https://github.com/mixtile-rockchip/manifests.git \
               -b linux-6.1-stan-rkr7 \
               -m rk3576-linux6.1-stan-rkr7.xml
+          elif [ "${{ github.event.inputs.board }}" = "Core3588E" ]; then
+            repo init \
+              -u https://github.com/mixtile-rockchip/manifests.git \
+              -b linux-6.1-stan-rkr7 \
+              -m rk3588-linux6.1-stan-rkr7.xml
           else
             echo "Unsupported board: ${{ github.event.inputs.board }}" >&2
             exit 1
@@ -164,6 +170,9 @@ jobs:
             CFG="${SOURCE_DIR}/buildroot/configs/rockchip_rk3566_focalcrest_az07_defconfig"
           elif [ "${{ github.event.inputs.board }}" = "AZ08" ]; then
             CFG="${SOURCE_DIR}/buildroot/configs/rockchip_rk3576s_focalcrest_az08_defconfig"
+          elif [ "${{ github.event.inputs.board }}" = "Core3588E" ]; then
+            # No _factory_ variant in buildroot; factory's RK_BUILDROOT_BASE_CFG points here.
+            CFG="${SOURCE_DIR}/buildroot/configs/rockchip_rk3588_mixtile_core3588e_defconfig"
           fi
 
           # Remove any existing ccache settings to avoid duplicates
@@ -199,6 +208,8 @@ jobs:
             sudo -E ./build.sh chip:rk3566_rk3568:rockchip_rk3566_focalcrest_az07_defconfig
           elif [ "${{ github.event.inputs.board }}" = "AZ08" ]; then
             sudo -E ./build.sh chip:rk3576:rockchip_rk3576s_focalcrest_az08_defconfig
+          elif [ "${{ github.event.inputs.board }}" = "Core3588E" ]; then
+            sudo -E ./build.sh chip:rk3588:rockchip_rk3588_mixtile_core3588e_factory_defconfig
           fi
           sudo -E ./build.sh all
 

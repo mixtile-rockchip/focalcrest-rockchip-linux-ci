@@ -11,6 +11,7 @@ CI/CD repository for building Rockchip Linux images.
 - AZ05
 - AZ07
 - AZ08
+- Core3588E
 
 ## Build Type
 - Production Test
